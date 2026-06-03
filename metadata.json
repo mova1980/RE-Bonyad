@@ -1,0 +1,32 @@
+{
+  "name": "RE-YADEGARAN- 14050206-Ver9 API KEY",
+  "description": "یک سامانه هوشمند برای جمع‌آوری، تحلیل، و آرشیو اسناد شهدا و ایثارگران استان البرز، شامل ۲۷۰۲ ایثارگر. این سیستم از قابلیت‌های هوش مصنوعی مانند OCR، تشخیص چهره، تحلیل احساسات و تطبیق تصویر برای مدیریت جامع پرونده‌ها بهره می‌برد.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "contextualData": {
+    "totalIsargaran": 20702,
+    "categories": {
+      "martyrsAndFamilies": "شهدا و خانواده‌های آنان",
+      "disabledVeterans50PlusAndFamilies": "جانبازان (۵۰ درصد به بالا) و خانواده‌های آنان",
+      "freedPrisonersAndFamilies": "آزادگان و خانواده‌های آنان",
+      "livingMartyrParents": "پدر و مادر شهدای در قید حیات",
+      "livingMartyrSpouses": "همسران شهدای در قید حیات"
+    },
+    "cities": [
+      "اشتهارد",
+      "چهارباغ",
+      "ساوجبلاغ",
+      "طالقان",
+      "فردیس",
+      "نظرآباد",
+      "منطقه 1 کرج",
+      "منطقه 2 کرج",
+      "سایر مناطق کرج"
+    ]
+  },
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
