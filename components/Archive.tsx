@@ -52,6 +52,7 @@ const Archive: React.FC<ArchiveProps> = ({ t, language, documents, setDocuments,
     const [viewDoc, setViewDoc] = useState<Document | null>(null); 
     const [editDoc, setEditDoc] = useState<Partial<Document> | null>(null); 
     const [isTtsPlaying, setIsTtsPlaying] = useState(false);
+    const [docToDelete, setDocToDelete] = useState<string | null>(null);
     
     // Profile Form State
     const [newProfile, setNewProfile] = useState<Partial<MartyrProfile>>({
@@ -246,12 +247,18 @@ const Archive: React.FC<ArchiveProps> = ({ t, language, documents, setDocuments,
             return;
         }
 
-        if (window.confirm('آیا از حذف دائمی این سند اطمینان دارید؟')) {
-            setDocuments(prev => prev.filter(d => d.id !== id));
-            if (viewDoc?.id === id) {
+        setDocToDelete(id);
+    };
+
+    const confirmDeleteDoc = () => {
+        if (docToDelete) {
+            setDocuments(prev => prev.filter(d => d.id !== docToDelete));
+            if (viewDoc?.id === docToDelete || editDoc?.id === docToDelete) {
                 setIsDocModalOpen(false);
                 setViewDoc(null);
+                setEditDoc(null);
             }
+            setDocToDelete(null);
         }
     };
 
@@ -529,7 +536,24 @@ const Archive: React.FC<ArchiveProps> = ({ t, language, documents, setDocuments,
                                 <div key={doc.id} onClick={() => openDocModal(doc)} className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden group hover:shadow-2xl cursor-pointer border border-gray-100 dark:border-gray-700 transition-all relative">
                                     <div className="h-44 bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative overflow-hidden">
                                         {doc.thumbnail ? <img src={doc.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <FileText size={48} className="text-gray-300" />}
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Eye className="text-white" size={24}/></div>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); openDocModal(doc); }}
+                                                className="p-3 bg-white/20 text-white rounded-full hover:bg-white/40 transition-all"
+                                                title="مشاهده"
+                                            >
+                                                <Eye className="text-white" size={18}/>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteDoc(doc.id, e); }}
+                                                className="p-3 bg-red-600/80 text-white rounded-full hover:bg-red-700 transition-all"
+                                                title="حذف سند"
+                                            >
+                                                <Trash2 className="text-white" size={18}/>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="p-4"><p className="font-bold text-sm truncate text-gray-800 dark:text-gray-100">{doc.title}</p><p className="text-[10px] text-gray-400 mt-1 uppercase">{doc.category}</p></div>
                                 </div>
@@ -701,11 +725,50 @@ const Archive: React.FC<ArchiveProps> = ({ t, language, documents, setDocuments,
                                         {t.speakVasiat}
                                     </button>
                                 )}
-                                <div className="flex gap-4">
+                                <div className="flex gap-3">
+                                    {(viewDoc?.id || editDoc?.id) && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); handleDeleteDoc((viewDoc?.id || editDoc?.id)!, e); }}
+                                            className="px-4 py-4 bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 rounded-2xl font-bold hover:bg-red-100 transition-all flex items-center justify-center border border-red-200/30"
+                                            title="حذف دائمی سند"
+                                        >
+                                            <Trash2 size={20}/>
+                                        </button>
+                                    )}
                                     <button type="button" onClick={(e) => { e.preventDefault(); setIsDocModalOpen(false); }} className="flex-1 py-4 text-sm font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all">انصراف</button>
                                     <button type="button" onClick={(e) => { e.preventDefault(); handleEditDocSave(); }} className="flex-1 py-4 bg-[#1A5D1A] text-white rounded-2xl font-bold shadow-xl hover:bg-green-800 transition-all">ذخیره نهایی</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Consent Delete Modal */}
+            {docToDelete && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in text-right" dir="rtl">
+                    <div className="bg-white dark:bg-gray-800 rounded-[32px] p-8 shadow-2xl max-w-md w-full border border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+                            <AlertTriangle size={32} />
+                            <h4 className="font-bold text-xl">تأیید حذف سند</h4>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-7 mb-6">آیا از حذف دائمی این سند اطمینان دارید؟ این عمل غیرقابل بازگشت است و سند از سرور یادگاران به کل پاک می‌شود.</p>
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setDocToDelete(null)}
+                                className="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all"
+                            >
+                                انصراف
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteDoc}
+                                className="flex-1 py-3 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 shadow-lg shadow-red-900/15 transition-all text-sm"
+                            >
+                                بله، حذف شود
+                            </button>
                         </div>
                     </div>
                 </div>

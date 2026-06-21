@@ -238,6 +238,86 @@ const HooshmandNegar: React.FC<HooshmandNegarProps> = ({ t, tags, documents, set
         }
     };
 
+    const downloadImageWithFilters = async (imageUrl: string, titleShort: string, useOriginal: boolean = false) => {
+        try {
+            if (useOriginal) {
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `${titleShort}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = imageUrl;
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 800;
+                    canvas.height = img.naturalHeight || img.height || 800;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        let filterString = '';
+                        if (grayscale > 0) filterString += `grayscale(${grayscale}%) `;
+                        if (sepia > 0) filterString += `sepia(${sepia}%) `;
+                        if (brightness !== 100) filterString += `brightness(${brightness}%) `;
+                        if (contrast !== 100) filterString += `contrast(${contrast}%) `;
+                        
+                        if (filterString.trim()) {
+                            ctx.filter = filterString.trim();
+                        }
+                        
+                        ctx.drawImage(img, 0, 0);
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                const blobUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.download = `${titleShort}.png`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(blobUrl);
+                            } else {
+                                throw new Error("Blob creation failed");
+                            }
+                        }, 'image/png');
+                    } else {
+                        throw new Error("Could not get 2d context");
+                    }
+                } catch (canvasErr) {
+                    console.error("Canvas draw failed, falling back to direct download:", canvasErr);
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = `${titleShort}.png`;
+                    link.target = '_blank';
+                    link.click();
+                }
+            };
+            img.onerror = () => {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = `${titleShort}.png`;
+                link.target = '_blank';
+                link.click();
+            };
+        } catch (err) {
+            console.error("Fetch download failed:", err);
+            const link = document.createElement('a');
+            link.href = imageUrl;
+            link.download = `${titleShort}.png`;
+            link.target = '_blank';
+            link.click();
+        }
+    };
+
     const handleCopyText = (id: string, text: string) => {
         navigator.clipboard.writeText(text);
         setCopiedId(id);
@@ -727,95 +807,96 @@ const HooshmandNegar: React.FC<HooshmandNegarProps> = ({ t, tags, documents, set
                                 )}
  
                                 {modalState === 'result' && parsedResult && (
-                                    <div className="space-y-8 animate-fade-in">
-                                        <div className="text-right pb-4 border-b border-gray-100 dark:border-gray-800">
-                                            <span className="text-xs font-bold text-gray-400">محصول آفرینش هوشمند</span>
-                                            <h2 className="text-2xl font-black text-[#1a5d1a] dark:text-[#D4AF37] mt-1">{parsedResult.title}</h2>
-                                        </div>
+                                     <div className="space-y-8 animate-fade-in">
+                                         <div className="text-right pb-4 border-b border-gray-100 dark:border-gray-800">
+                                             <span className="text-xs font-bold text-gray-400">محصول آفرینش هوشمند</span>
+                                             <h2 className="text-2xl font-black text-[#1a5d1a] dark:text-[#D4AF37] mt-1">{parsedResult.title}</h2>
+                                         </div>
 
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                                            {/* Left Column: Rich Interactive Media Preview Hub */}
-                                            <div className="lg:col-span-5 space-y-4">
-                                                <div className="bg-gray-50 dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 text-center flex flex-col justify-between h-full min-h-[380px]">
-                                                    {parsedResult.mediaType === 'visual' && (
-                                                        <div className="space-y-4 flex-1 flex flex-col justify-between">
-                                                            <div className="space-y-1">
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500/15 text-amber-500">
-                                                                    <PaletteIcon size={12} /> بوم نقاشی و اثر تجسمی
-                                                                </span>
-                                                            </div>
+                                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                                             {/* Left Column: Rich Interactive Media Preview Hub */}
+                                             <div className="lg:col-span-5 space-y-4">
+                                                 <div className="bg-gray-50 dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 text-center flex flex-col justify-between h-full min-h-[380px]">
+                                                     {parsedResult.mediaType === 'visual' && (
+                                                         <div className="space-y-4 flex-1 flex flex-col justify-between">
+                                                             <div className="space-y-1">
+                                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500/15 text-amber-500">
+                                                                     <PaletteIcon size={12} /> بوم نقاشی و اثر تجسمی
+                                                                 </span>
+                                                             </div>
 
-                                                            <div className="relative aspect-square max-h-[220px] mx-auto rounded-2xl overflow-hidden shadow-lg border-4 border-amber-900/10 flex items-center justify-center bg-gray-100 dark:bg-gray-900 group">
-                                                                <img 
-                                                                    src={`https://image.pollinations.ai/prompt/${encodeURIComponent(parsedResult.imagePrompt)}?width=600&height=600&nologo=true&seed=${imageSeed}`}
-                                                                    alt={parsedResult.title}
-                                                                    referrerPolicy="no-referrer"
-                                                                    className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
-                                                                    style={{
-                                                                        filter: `grayscale(${grayscale}%) sepia(${sepia}%) brightness(${brightness}%) contrast(${contrast}%)`
-                                                                    }}
-                                                                />
-                                                                <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-xs py-1 px-3 text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    تکنیک مینیاتور دیجیتال هوشمند
-                                                                </div>
-                                                            </div>
+                                                             <div className="relative aspect-square max-h-[220px] mx-auto rounded-2xl overflow-hidden shadow-lg border-4 border-amber-900/10 flex items-center justify-center bg-gray-100 dark:bg-gray-900 group">
+                                                                 <img 
+                                                                     src={`https://image.pollinations.ai/prompt/${encodeURIComponent(parsedResult.imagePrompt)}?width=600&height=600&nologo=true&seed=${imageSeed}`}
+                                                                     alt={parsedResult.title}
+                                                                     referrerPolicy="no-referrer"
+                                                                     className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
+                                                                     style={{
+                                                                         filter: `grayscale(${grayscale}%) sepia(${sepia}%) brightness(${brightness}%) contrast(${contrast}%)`
+                                                                     }}
+                                                                 />
+                                                                 <div className="absolute inset-x-0 bottom-0 bg-black/40 backdrop-blur-xs py-1 px-3 text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                     تکنیک مینیاتور دیجیتال هوشمند
+                                                                 </div>
+                                                             </div>
 
-                                                            {/* Filters Setup */}
-                                                            <div className="space-y-2.5 pt-2 text-right">
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <span className="font-bold text-gray-500 dark:text-gray-400">گرادیان سیاه و سفید</span>
-                                                                    <input 
-                                                                        type="range" 
-                                                                        min="0" max="100" 
-                                                                        className="w-24 accent-[#1a5d1a]"
-                                                                        value={grayscale} 
-                                                                        onChange={(e) => setGrayscale(Number(e.target.value))}
-                                                                    />
-                                                                </div>
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <span className="font-bold text-gray-500 dark:text-gray-400">افکت سپیا (کهنه‌نما)</span>
-                                                                    <input 
-                                                                        type="range" 
-                                                                        min="0" max="100" 
-                                                                        className="w-24 accent-[#1a5d1a]"
-                                                                        value={sepia} 
-                                                                        onChange={(e) => setSepia(Number(e.target.value))}
-                                                                    />
-                                                                </div>
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <span className="font-bold text-gray-500 dark:text-gray-400">تضاد نوری (کنتراست)</span>
-                                                                    <input 
-                                                                        type="range" 
-                                                                        min="50" max="150" 
-                                                                        className="w-24 accent-[#1a5d1a]"
-                                                                        value={contrast} 
-                                                                        onChange={(e) => setContrast(Number(e.target.value))}
-                                                                    />
-                                                                </div>
-                                                            </div>
+                                                             {/* Filters Setup */}
+                                                             <div className="space-y-2.5 pt-2 text-right">
+                                                                 <div className="flex justify-between items-center text-xs">
+                                                                     <span className="font-bold text-gray-500 dark:text-gray-400">گرادیان سیاه و سفید</span>
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="0" max="100" 
+                                                                         className="w-24 accent-[#1a5d1a]"
+                                                                         value={grayscale} 
+                                                                         onChange={(e) => setGrayscale(Number(e.target.value))}
+                                                                     />
+                                                                 </div>
+                                                                 <div className="flex justify-between items-center text-xs">
+                                                                     <span className="font-bold text-gray-500 dark:text-gray-400">افکت سپیا (کهنه‌نما)</span>
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="0" max="100" 
+                                                                         className="w-24 accent-[#1a5d1a]"
+                                                                         value={sepia} 
+                                                                         onChange={(e) => setSepia(Number(e.target.value))}
+                                                                     />
+                                                                 </div>
+                                                                 <div className="flex justify-between items-center text-xs">
+                                                                     <span className="font-bold text-gray-500 dark:text-gray-400">تضاد نوری (کنتراست)</span>
+                                                                     <input 
+                                                                         type="range" 
+                                                                         min="50" max="150" 
+                                                                         className="w-24 accent-[#1a5d1a]"
+                                                                         value={contrast} 
+                                                                         onChange={(e) => setContrast(Number(e.target.value))}
+                                                                     />
+                                                                 </div>
+                                                             </div>
 
-                                                            <div className="flex gap-2 pt-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setImageSeed(Math.floor(Math.random() * 100000))}
-                                                                    className="flex-1 py-2 text-xs font-bold bg-[#1A5D1A]/10 text-[#1A5D1A] dark:text-white dark:bg-[#1A5D1A]/50 rounded-xl hover:bg-[#1A5D1A]/20 transition-all flex items-center justify-center gap-1.5"
-                                                                >
-                                                                    <RotateCw size={14} className="animate-spin-slow" /> تولید مدل بصری نو
-                                                                </button>
-                                                                <a
-                                                                    href={`https://image.pollinations.ai/prompt/${encodeURIComponent(parsedResult.imagePrompt)}?width=1024&height=768&nologo=true&seed=${imageSeed}`}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="px-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-white rounded-xl flex items-center justify-center"
-                                                                    title="دریافت تصویر کامل"
-                                                                >
-                                                                    <Download size={14} />
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {parsedResult.mediaType === 'written' && (
+                                                             <div className="flex gap-2 pt-2">
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => setImageSeed(Math.floor(Math.random() * 100000))}
+                                                                     className="flex-1 py-2 text-xs font-bold bg-[#1A5D1A]/10 text-[#1A5D1A] dark:text-white dark:bg-[#1A5D1A]/50 rounded-xl hover:bg-[#1A5D1A]/20 transition-all flex items-center justify-center gap-1.5"
+                                                                 >
+                                                                     <RotateCw size={14} className="animate-spin-slow" /> تولید مدل بصری نو
+                                                                 </button>
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => {
+                                                                         const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(parsedResult.imagePrompt)}?width=1024&height=1024&nologo=true&seed=${imageSeed}`;
+                                                                         downloadImageWithFilters(imageUrl, parsedResult.title || 'generated-image');
+                                                                     }}
+                                                                     className="px-4 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white rounded-xl flex items-center justify-center gap-2 font-black text-xs transition-all shadow-md"
+                                                                     title="دانلود تصویر با فیلترهای نوری اعمال شده"
+                                                                 >
+                                                                     <Download size={14} /> دانلود و ذخیره تصویر
+                                                                 </button>
+                                                             </div>
+                                                         </div>
+                                                     )}
+{parsedResult.mediaType === 'written' && (
                                                         <div className="space-y-4 flex-1 flex flex-col justify-between">
                                                             <div>
                                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-500/15 text-emerald-500 mb-1">

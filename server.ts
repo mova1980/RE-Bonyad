@@ -212,20 +212,42 @@ async function startServer() {
         }
     });
 
-    // Vite middleware for development, static serve for production
-    if (process.env.NODE_ENV !== "production") {
-        const { createServer: createViteServer } = await import("vite");
-        const vite = await createViteServer({
-            server: { middlewareMode: true },
-            appType: "spa",
-        });
-        app.use(vite.middlewares);
-        console.log("Started Vite Dev Server middleware inside Express");
-    } else {
+    // Detect production environment more robustly (explicitly checking for Cloud Run environment variables)
+    let isProd = process.env.NODE_ENV === "production" || !!process.env.K_SERVICE || !!process.env.K_REVISION;
+
+    let useVite = !isProd;
+    if (useVite) {
+        try {
+            const { createServer: createViteServer } = await import("vite");
+            const vite = await createViteServer({
+                server: { middlewareMode: true },
+                appType: "spa",
+            });
+            app.use(vite.middlewares);
+            console.log("Started Vite Dev Server middleware inside Express");
+        } catch (viteError) {
+            console.warn("Could not import Vite / start Vite Dev Server. Falling back to production static serve:", viteError);
+            useVite = false;
+            isProd = true;
+        }
+    }
+
+    if (!useVite) {
         const distPath = path.join(process.cwd(), 'dist');
         app.use(express.static(distPath));
+        
+        // Single-page application route support for Express 5
         app.get('*all', (req, res) => {
             res.sendFile(path.join(distPath, 'index.html'));
+        });
+        
+        // Robust fallback middleware for any unmatched GET requests requesting HTML
+        app.use((req, res, next) => {
+            if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) {
+                res.sendFile(path.join(distPath, 'index.html'));
+            } else {
+                res.status(404).json({ error: "Page not found" });
+            }
         });
         console.log("Serving static production assets from dist/");
     }
