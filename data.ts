@@ -265,7 +265,6 @@ export const SAMPLE_TAGS = [
 
 export const MOCK_USERS: User[] = [
     { id: 1, name: 'مدیر سیستم', username: 'admin', role: 'ADMIN', avatar: 'https://lh3.googleusercontent.com/d/18oO9ea3mBJBGQZYonKWxZ9VIxRZAIC8f', status: 'active', lastLogin: '14:30 امروز' },
-    { id: 2, name: 'سارا احمدی', username: 'sahmadi', role: 'EXPERT', avatar: '', status: 'active', lastLogin: 'دیروز' },
 ];
 
 export const MOCK_PROFILES: MartyrProfile[] = [

@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_USERS } from '../data';
 import { MoreHorizontal, UserPlus, Search, Shield, Edit, Trash2 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import UserForm from './UserForm';
 
 const UsersList: React.FC = () => {
-    const [users, setUsers] = useState<User[]>(MOCK_USERS);
+    const [users, setUsers] = useState<User[]>(() => {
+        const saved = localStorage.getItem('yadegaran_users');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse yadegaran_users:", e);
+            }
+        }
+        return MOCK_USERS;
+    });
+    
+    const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        localStorage.setItem('yadegaran_users', JSON.stringify(users));
+    }, [users]);
 
     const handleAddUser = () => {
         setEditingUser(null);
@@ -20,6 +36,10 @@ const UsersList: React.FC = () => {
     };
 
     const handleDeleteUser = (userId: number) => {
+        const userToDelete = users.find(u => u.id === userId);
+        if (userToDelete && userToDelete.username === 'admin') {
+            return;
+        }
         setUsers(users.filter(user => user.id !== userId));
     };
 
@@ -27,11 +47,21 @@ const UsersList: React.FC = () => {
         if (editingUser) {
             setUsers(users.map(u => (u.id === user.id ? user : u)));
         } else {
-            const newUser = { ...user, id: Date.now() };
+            const newUser: User = { 
+                ...user, 
+                id: Date.now(), 
+                status: 'active' as const, 
+                lastLogin: 'هم‌اکنون' 
+            };
             setUsers([...users, newUser]);
         }
         setIsModalOpen(false);
     };
+
+    const filteredUsers = users.filter(user => 
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div className="space-y-6">
@@ -40,6 +70,8 @@ const UsersList: React.FC = () => {
                     <input 
                         type="text" 
                         placeholder="جستجوی کاربر..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-4 pr-10 py-2 bg-gray-50 dark:bg-gray-700 rounded-xl text-sm border-none outline-none dark:text-white focus:ring-2 focus:ring-[#1A5D1A]"
                     />
                     <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
@@ -62,7 +94,7 @@ const UsersList: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {users.map((user) => (
+                        {filteredUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
@@ -103,13 +135,22 @@ const UsersList: React.FC = () => {
                                         <button onClick={() => handleEditUser(user)} className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-blue-500 transition-colors">
                                             <Edit size={16} />
                                         </button>
-                                        <button onClick={() => handleDeleteUser(user.id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg text-red-500 transition-colors">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {user.username !== 'admin' && (
+                                            <button onClick={() => handleDeleteUser(user.id)} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg text-red-500 transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
                         ))}
+                        {filteredUsers.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400 font-bold">
+                                    کاربری با مشخصات وارد شده یافت نشد.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
